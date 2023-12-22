@@ -130,27 +130,26 @@ LEFT JOIN (
                     tipo_pagamento,
                     vlr_pagamento
 
-		   FROM     pagamento
+	   FROM     pagamento
           ) as pag
 ON        (comp.id_compra = pag.id_compra)
 LEFT JOIN (
            SELECT   id_compra,
                     id_produto,
                     preco,
-	                frete,
+	            frete,
                     COUNT(id_produto) as quantidade_produtos
 
-		   FROM     itens
+	   FROM     itens
 		   
-		   GROUP BY 1,2,3,4
+	   GROUP BY 1,2,3,4
           ) as itens
 ON        (comp.id_compra = itens.id_compra)
 LEFT JOIN (
            SELECT   id_produto,
                     produto_categoria
 
-		   FROM     produtos
-
+	   FROM     produtos
           ) as prod
 ON        (prod.id_produto = itens.id_produto)
 )
