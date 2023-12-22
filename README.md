@@ -94,7 +94,7 @@ Abaixo o tratamento realizado em SQL, para criação do DW com as informações 
 
 ```
 WITH padronizacao_compras as (
-SELECT    /* Tratamento para criação de identificador único dos status de compra */
+SELECT     /* Tratamento para criação de identificador único dos status de compra */
           CASE
               WHEN comp.status_compra LIKE 'approved'    THEN '01.approved'
               WHEN comp.status_compra LIKE 'canceled'    THEN '02.canceled'
@@ -105,9 +105,9 @@ SELECT    /* Tratamento para criação de identificador único dos status de com
               WHEN comp.status_compra LIKE 'shipped'     THEN '07.shipped'	
               WHEN comp.status_compra LIKE 'unavailable' THEN '08.unavailable'
           END as status_compra,
-/* Tratamento para criação de identificador único dos tipos de pagamento */
           CAST(comp.dt_compra as DATE) as dt_compra,
-		  CASE
+/* Tratamento para criação de identificador único dos tipos de pagamento */
+          CASE
               WHEN pag.tipo_pagamento LIKE 'boleto'      THEN '01.boleto'
               WHEN pag.tipo_pagamento LIKE 'credit_card' THEN '02.credit card'
               WHEN pag.tipo_pagamento LIKE 'debit_card'  THEN '03.debit card'
@@ -115,11 +115,14 @@ SELECT    /* Tratamento para criação de identificador único dos status de com
               WHEN pag.tipo_pagamento LIKE 'voucher'     THEN '05.voucher'
           END as tipo_pagamento,
 		  pag.vlr_pagamento,
-		  itens.preco as preco_unitario_item,
-		  itens.quantidade_produtos,
-		  itens.frete,
+	  CASE
+	      WHEN pag.vlr_pagamento > 0 THEN pag.vlr_pagamento * 0.05
+	  END as cashback,
+	  itens.preco as preco_unitario_item,
+	  itens.quantidade_produtos,
+	  itens.frete,
 /* Tratamento para criação substiuição de caracteres '_' por '/'*/
-		  TRIM(UPPER(REPLACE(prod.produto_categoria, '_', '/'))) as produto_categoria
+	  TRIM(UPPER(REPLACE(prod.produto_categoria, '_', '/'))) as produto_categoria
 
 FROM      compra    as comp
 LEFT JOIN (
@@ -154,16 +157,17 @@ ON        (prod.id_produto = itens.id_produto)
 
 SELECT   /* Separação dos campos de identificação e descrição do status da compra */
          TRIM(SPLIT_PART(padc.status_compra, '.', 1)) as id_status_compra,
-         TRIM(SPLIT_PART(padc.status_compra, '.', 2))           as status_compra_desc,
+         TRIM(SPLIT_PART(padc.status_compra, '.', 2)) as status_compra_desc,
          padc.dt_compra,
-/* Separação dos campos de identificação e descrição do tipo de pagamento */
-         TRIM(SPLIT_PART(padc.tipo_pagamento, '.', 1)) as id_tipo_pagamento,
-         TRIM(SPLIT_PART(padc.tipo_pagamento, '.', 2))           as tipo_pagamento_desc,
-		 padc.preco_unitario_item as preco_unitario_item,
-		 padc.frete,
-		 padc.produto_categoria,
-		 SUM(padc.vlr_pagamento)       as vlr_compra,
-		 SUM(padc.quantidade_produtos) as quantidade_produtos		 
+         /* Separação dos campos de identificação e descrição do tipo de pagamento */
+	 TRIM(SPLIT_PART(padc.tipo_pagamento, '.', 1)) as id_tipo_pagamento,
+         TRIM(SPLIT_PART(padc.tipo_pagamento, '.', 2)) as tipo_pagamento_desc,
+	 padc.preco_unitario_item as preco_unitario_item,
+	 padc.frete,
+	 padc.produto_categoria,
+	 SUM(padc.cashback)            as vlr_cashback,
+	 SUM(padc.vlr_pagamento)       as vlr_compra,
+	 SUM(padc.quantidade_produtos) as quantidade_produtos		 
 
 FROM     padronizacao_compras as padc
 
